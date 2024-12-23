@@ -1,0 +1,273 @@
+# Blender 4.0.2 MTL File: 'parking_lot.blend'
+# www.blender.org
+
+newmtl GLASS_Inst
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+illum 2
+map_Kd glass_mat_diffuse.jpeg
+map_d glass_mat_opacity.jpeg
+
+newmtl Lights_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 1.900000 1.832129 0.234656
+Ni 1.000000
+d 0.727273
+illum 9
+map_Kd glass_mat_diffuse.jpeg
+
+newmtl atlas_mat
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd atlas_mat_diffuse.jpeg
+map_Bump atlas_mat_normal.png
+
+newmtl base_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd base_m_diffuse.jpeg
+map_Bump base_m_normal.png
+
+newmtl blackpaint_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd blackpaint_m_diffuse.jpeg
+map_Bump blackpaint_m_normal.png
+
+newmtl box2_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd box2_m_diffuse.jpeg
+map_Bump box2_m_normal.png
+
+newmtl concrete_floor_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd concrete_floor_m_diffuse.jpeg
+map_Bump concrete_floor_m_normal.png
+
+newmtl fencebase_mat
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd fencebase_mat_diffuse.jpeg
+map_Bump fencebase_mat_normal.png
+
+newmtl fenceframe_mat
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd fenceframe_mat_diffuse.jpeg
+map_Bump fenceframe_mat_normal.png
+
+newmtl fencemesh_mat
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+illum 2
+map_Kd fencemesh_mat_diffuse.png
+map_d fencemesh_mat_opacity.png
+map_Bump fencemesh_mat_normal.png
+
+newmtl fencerings_mat
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd fencerings_mat_diffuse.jpeg
+map_Bump fencerings_mat_normal.png
+
+newmtl fix_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd fix_m_diffuse.jpeg
+map_Bump fix_m_normal.png
+
+newmtl gate_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd gate_m_diffuse.jpeg
+map_Bump gate_m_normal.png
+
+newmtl lamp3_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd lamp3_m_diffuse.jpeg
+map_Bump lamp3_m_normal.png
+
+newmtl lampframe_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd lampframe_m_diffuse.jpeg
+map_Bump lampframe_m_normal.png
+
+newmtl lampgrill_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd lampgrill_m_diffuse.jpeg
+map_Bump lampgrill_m_normal.png
+
+newmtl marks_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd marks_m_diffuse.jpeg
+map_Bump marks_m_normal.png
+
+newmtl pipechair1_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd pipechair1_m_diffuse.jpeg
+map_Bump pipechair1_m_normal.png
+
+newmtl plastic_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd plastic_m_diffuse.jpeg
+map_Bump plastic_m_normal.png
+
+newmtl steel_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd steel_m_diffuse.jpeg
+map_Bump steel_m_normal.png
+
+newmtl switches_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd switches_m_diffuse.jpeg
+map_Bump switches_m_normal.png
+
+newmtl vent_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd vent_m_diffuse.jpeg
+map_Bump vent_m_normal.png
+
+newmtl white_light2_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd glass_mat_diffuse.jpeg
+
+newmtl white_light_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd whitepaint_m_diffuse.jpeg
+
+newmtl whitepaint_m
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd whitepaint_m_diffuse.jpeg
+map_Bump whitepaint_m_normal.png
