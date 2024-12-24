@@ -1,120 +1,100 @@
 #version 330 core
-// Outputs colors in RGBA
+
 out vec4 FragColor;
 
 in vec3 currentPos;
 in vec3 Normal;
-// Inputs the color from the Vertex Shader
 in vec3 color;
-// Inputs the texture coordinates from the Vertex Shader
 in vec2 texCoord;
 
-// Gets the Texture Unit from the main function (diffuse texture)
 uniform sampler2D diffuseTex;
-// Gets the Texture Unit from the main function (specular)
 uniform sampler2D specularTex;
-// (ambient occlusion)
 uniform sampler2D ambientTex;
 
-// Get the color from the light source
-uniform vec4 lightColor;
-// Get the position of the light
-uniform vec3 lightPos;
-// Get the rotation of the light
-uniform vec3 lightRot;
-// Modular light intensity
-uniform float lightInten;
-// Modular light type
-uniform int lightType;
+// Light structure definition
+struct Light {
+    vec4 lightColor;
+    vec3 lightPos;
+    vec3 lightRot;
+    float lightInten;
+    int lightType; // 1 for directional, 2 for point, 3 for spotlight
+};
+
+// Array of lights
+uniform Light lights[10]; // Adjust size based on the maximum number of lights you have
+uniform int numLights;        // Number of active lights
+
 // Camera position
 uniform vec3 camPos;
 
-//for Depth
 float near = 0.1f;
 float far = 100.0f;
 
-vec4 pointLight(){
-	
-	vec3 lightVec = lightPos - currentPos;
-	float dist = length(lightVec);
-	//equation for light distance and fade properties
-	float a = 1.0f, b = 0.7f;
-	float inten = 1.0f / (a * dist * dist + b * dist + 1.0f) * lightInten;
+vec4 pointLight(Light light){
+    vec3 lightVec = light.lightPos - currentPos;
+    float dist = length(lightVec);
+    float a = 1.0f, b = 0.7f;
+    float inten = 1.0f / (a * dist * dist + b * dist + 1.0f) * light.lightInten;
 
-	//ambient lighting
-	float ambient = 0.2f;
+    float ambient = 0.2f;
 
-	vec3 normal = normalize(Normal);
-	vec3 lightDirection = normalize(lightVec);
-	float diffuse = max(dot(normal, lightDirection), 0.0f);
+    vec3 normal = normalize(Normal);
+    vec3 lightDirection = normalize(lightVec);
+    float diffuse = max(dot(normal, lightDirection), 0.0f);
 
-	//specular lighting
-	float specularLight = 0.5f;
-	vec3 viewDirection = normalize(camPos - currentPos);
-	vec3 reflectionDirection = reflect(-lightDirection, normal);
-	float specAmount = pow(max(dot(viewDirection, reflectionDirection), 0.0f), 16);
-	float specular = specAmount * specularLight;
-	float fallbackSpecularTex = texture(specularTex, texCoord).r; //if we dont have a texture, we make sure to still have a specular point on that mesh
-	if(fallbackSpecularTex == 0.0f)
-		fallbackSpecularTex = 1.0f;
+    float specularLight = 0.5f;
+    vec3 viewDirection = normalize(camPos - currentPos);
+    vec3 reflectionDirection = reflect(-lightDirection, normal);
+    float specAmount = pow(max(dot(viewDirection, reflectionDirection), 0.0f), 16);
+    float specular = specAmount * specularLight;
+    float fallbackSpecularTex = texture(specularTex, texCoord).r; 
+    if(fallbackSpecularTex == 0.0f) fallbackSpecularTex = 1.0f;
 
-	return (texture(diffuseTex, texCoord) * (diffuse * inten + texture(ambientTex, texCoord) * ambient) * lightInten + fallbackSpecularTex * specular * inten  * lightInten * 0.25) * lightColor;
+    return (texture(diffuseTex, texCoord) * (diffuse * inten + texture(ambientTex, texCoord) * ambient) * light.lightInten + fallbackSpecularTex * specular * inten * 0.25) * light.lightColor;
 }
 
-vec4 directionalLight(){
-	
-	//ambient lighting
-	float ambient = 0.2f;
+vec4 directionalLight(Light light){
+    float ambient = 0.2f;
 
-	vec3 normal = normalize(Normal);
-	vec3 lightDirection = normalize(vec3(-lightRot.x, 1.0, -lightRot.z)); //note light direction is from the object to the light (so its inverted)
-	float diffuse = max(dot(normal, lightDirection), 0.0f);
+    vec3 normal = normalize(Normal);
+    vec3 lightDirection = normalize(vec3(-light.lightRot.x, 1.0, -light.lightRot.z)); 
+    float diffuse = max(dot(normal, lightDirection), 0.0f);
 
-	//specular lighting
-	float specularLight = 0.5f;
-	vec3 viewDirection = normalize(camPos - currentPos);
-	vec3 reflectionDirection = reflect(-lightDirection, normal);
-	float specAmount = pow(max(dot(viewDirection, reflectionDirection), 0.0f), 16);
-	float specular = specAmount * specularLight;
-	float fallbackSpecularTex = texture(specularTex, texCoord).r; //if we dont have a texture, we make sure to still have a specular point on that mesh
-	if(fallbackSpecularTex == 0.0f)
-		fallbackSpecularTex = 1.0f;
+    float specularLight = 0.5f;
+    vec3 viewDirection = normalize(camPos - currentPos);
+    vec3 reflectionDirection = reflect(-lightDirection, normal);
+    float specAmount = pow(max(dot(viewDirection, reflectionDirection), 0.0f), 16);
+    float specular = specAmount * specularLight;
+    float fallbackSpecularTex = texture(specularTex, texCoord).r; 
+    if(fallbackSpecularTex == 0.0f) fallbackSpecularTex = 1.0f;
 
-	return (texture(diffuseTex, texCoord) * (diffuse + texture(ambientTex, texCoord) * ambient) * lightInten + fallbackSpecularTex * specular * lightInten * 0.25) * lightColor;
+    return (texture(diffuseTex, texCoord) * (diffuse + texture(ambientTex, texCoord) * ambient) * light.lightInten + fallbackSpecularTex * specular * light.lightInten * 0.25) * light.lightColor;
 }
 
-vec4 spotLight(){
-	
-	//represent cos values of two angles
-	float outerCone = 0.9f;
-	float innerCone = 0.95f;
+vec4 spotLight(Light light){
+    float outerCone = 0.9f;
+    float innerCone = 0.95f;
 
-	float dist = length(lightPos - currentPos);
-	//equation for light distance and fade properties
-	float a = 0.1f, b = 0.5f;
-	float intenClassic = 1.0f / (a * dist * dist + b * dist + 1.0f) * lightInten; //for extra spotlight fade at large distances
+   
 
-	//ambient lighting
-	float ambient = 0.2f;
+    float ambient = 0.2f;
 
-	vec3 normal = normalize(Normal);
-	vec3 lightDirection = normalize(lightPos - currentPos);
-	float diffuse = max(dot(normal, lightDirection), 0.0f);
+    vec3 normal = normalize(Normal);
+    vec3 lightDirection = normalize(light.lightPos - currentPos);
+    float diffuse = max(dot(normal, lightDirection), 0.0f);
 
-	//specular lighting
-	float specularLight = 0.5f;
-	vec3 viewDirection = normalize(camPos - currentPos);
-	vec3 reflectionDirection = reflect(-lightDirection, normal);
-	float specAmount = pow(max(dot(viewDirection, reflectionDirection), 0.0f), 16);
-	float specular = specAmount * specularLight;
-	float fallbackSpecularTex = texture(specularTex, texCoord).r; //if we dont have a texture, we make sure to still have a specular point on that mesh
-	if(fallbackSpecularTex == 0.0f)
-		fallbackSpecularTex = 1.0f;
+    float specularLight = 0.5f;
+    vec3 viewDirection = normalize(camPos - currentPos);
+    vec3 reflectionDirection = reflect(-lightDirection, normal);
+    float specAmount = pow(max(dot(viewDirection, reflectionDirection), 0.0f), 16);
+    float specular = specAmount * specularLight;
+    float fallbackSpecularTex = texture(specularTex, texCoord).r; 
+    if(fallbackSpecularTex == 0.0f) fallbackSpecularTex = 1.0f;
 
-	float angle = dot(lightRot, -lightDirection);
-	float inten = clamp((angle - outerCone) / (innerCone - outerCone), 0.0f, 1.0f) * lightInten;
+    float angle = dot(light.lightRot, -lightDirection);
+    float inten = clamp((angle - outerCone) / (innerCone - outerCone), 0.0f, 1.0f) * light.lightInten;
 
-	return (texture(diffuseTex, texCoord) * (diffuse * intenClassic * inten + texture(ambientTex, texCoord) * ambient) + fallbackSpecularTex * specular * inten * lightInten * 0.1) * lightColor;
+    return (texture(diffuseTex, texCoord) * (diffuse * inten + texture(ambientTex, texCoord) * ambient) + fallbackSpecularTex * specular * inten * light.lightInten * 0.1) * light.lightColor;
 }
 
 float liniarizeDepth(float depth){
@@ -130,14 +110,21 @@ float logisticDepth(float depth, float stepness, float offset)
 	return (1 / (1 + exp(-stepness * (zVal - offset))));
 }
 
-void main()
-{
-	//vec4 zVal = vec4(vec3(liniarizeDepth(gl_FragCoord.z) / far), 1.0f); //can be used to see the depth buffer
+void main() {
+    
+    //can be used to see the depth buffer
+    //vec4 zVal = vec4(vec3(liniarizeDepth(gl_FragCoord.z) / far), 1.0f);
 	float depth = logisticDepth(gl_FragCoord.z, 0.125f, 20.0f);
-	if(lightType == 1)
-		FragColor = directionalLight() * (1.0f - depth) + vec4(depth * vec3(0.85f, 0.85f, 0.90f), 1.0f);
-	else if(lightType == 2)
-		FragColor = pointLight() * (1.0f - depth) + vec4(depth * vec3(0.85f, 0.85f, 0.90f), 1.0f);
-	else if(lightType == 3)
-		FragColor = spotLight() * (1.0f - depth) + vec4(depth * vec3(0.85f, 0.85f, 0.90f), 1.0f);
+    
+    vec4 resultColor = vec4(0.0f);
+    for(int i = 0; i < numLights; i++) {
+        Light light = lights[i];
+        if(light.lightType == 1)
+            resultColor += directionalLight(light);
+        else if(light.lightType == 2)
+            resultColor += pointLight(light);
+        else if(light.lightType == 3)
+            resultColor += spotLight(light);
+    }
+    FragColor = resultColor * (1.0f - depth) + vec4(depth * vec3(0.85f, 0.85f, 0.90f), 1.0f);
 }

@@ -15,12 +15,12 @@ class Camera {
 private:
 private:
 	glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, -1.0f);
-	glm::vec3 cameraFrontDirection;
-	glm::vec3 cameraRightDirection;
 	glm::vec3 const cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 	glm::vec3 cameraUpDirection = glm::vec3(0.0f, 1.0f, 0.0f);
 
 public:
+	glm::vec3 cameraFrontDirection;
+	glm::vec3 cameraRightDirection;
 	glm::vec3 cameraPosition;
 	int width;
 	int height;

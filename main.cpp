@@ -8,6 +8,7 @@ namespace fs = std::filesystem;
 #endif
 #include "Mesh.h" // this one contains all the other headers
 #include "Model3D.hpp"
+#include "Light.h"
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //DATA
 
@@ -23,28 +24,27 @@ float deltaTime;
 GLFWwindow* window;
 Camera camera(width, height, glm::vec3(0.0f, 2.0f, 2.0f));
 //Mouse movement
-float lastX = 400, lastY = 300; // Initial center position (assuming 800x600 window)
+float lastX = 800, lastY = 450; // Initial center position (assuming 800x600 window)
 bool firstMouse = true;          // Tracks if it's the first mouse movement
 bool cursorState = true;
+glm::vec2 savedCursorPos;
 
-//Light
-glm::vec4 lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-glm::vec3 lightPos = glm::vec3(0.0f, 1.2f, 0.8f);
-glm::vec3 lightRot = glm::vec3(0.0f, -1.0f, 0.0f);
-glm::mat4 lightModel = glm::mat4(1.0f);
-float lightInten = 1.0f;
-int lightType = 1;
-bool modifyLight = false;
+//Lights
+std::vector<Light> lights;
+int selectedLightIndex = 0;
+bool altPressed = false;
+bool hideLightObjects = false;
 
 // Outline
-glm::vec4 outlineColor = glm::vec4(1.0f, 0.8f, 0.0f, 1.0f);
+glm::vec4 outlineColor = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 glm::mat4 outlineModel = glm::mat4(1.0f);
 
 //3D Objects
 Model3D nanosuit;
 Model3D ground;
 Model3D monkey;
-Model3D lightbulb;
+glm::mat4 objModel = glm::mat4(1.0f);
+int rasterizeMode = 0;
 
 //SHADERS
 Shader lightShader;
@@ -86,98 +86,46 @@ void windowResizeCallback(GLFWwindow* window, int newWidth, int newHeight) {
 }
 
 void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int mode) {
+	
+	// Cycle through rasterizeModes
+	if (glfwGetKey(window, GLFW_KEY_GRAVE_ACCENT) == GLFW_PRESS) {
+		rasterizeMode = (rasterizeMode + 1) % 2; //for now only 2 modes: with or without outline
+	}
 
-	bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
-		glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-	bool altPressed = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
-		glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
+	// Check if Alt is pressed
+	if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) {
+		if (!altPressed) {
+			altPressed = true;
 
-	//CURSOR VISIBILITY
+			// Save the current cursor position when Alt is first pressed
+			double xpos, ypos;
+			glfwGetCursorPos(window, &xpos, &ypos);
+			savedCursorPos = glm::vec2(xpos, ypos);
+		}
+	}
+	else if (altPressed) {
+		// When Alt is released, restore cursor position
+		altPressed = false;
+
+		// Reset cursor to saved position
+		glfwSetCursorPos(window, savedCursorPos.x, savedCursorPos.y);
+	}
+
+	// CURSOR VISIBILITY
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 		cursorState = true;
 	}
 
-	//LIGHT POSITION / ROTATION
-	if (shiftPressed && key == GLFW_KEY_UP && action == GLFW_PRESS) {
-		lightPos.y += 0.1;  // UP
-		modifyLight = true;
-	}
-	else if (altPressed && key == GLFW_KEY_UP && action == GLFW_PRESS) {
-		lightRot.z = fmod(lightRot.z - 0.25f, -3.0f); // ROTATE FORWARD
-;		modifyLight = true;
-	}
-	else if (key == GLFW_KEY_UP && action == GLFW_PRESS) {
-		lightPos.z -= 0.1;  // FORWARD
-		modifyLight = true;
-	}
-	if (shiftPressed && key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
-		lightPos.y -= 0.1;  // DOWN
-		modifyLight = true;
-	}
-	else if (altPressed && key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
-		lightRot.z = fmod(lightRot.z + 0.25f, 3.0f);;  // ROTATE BACKWARD
-		modifyLight = true;
-	}
-	else if (key == GLFW_KEY_DOWN && action == GLFW_PRESS) {
-		lightPos.z += 0.1;  // BACKWARD
-		modifyLight = true;
-	}
-	if (altPressed && key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
-		lightRot.x = fmod(lightRot.x + 0.25f, 3.0f);; // ROTATE RIGHT
-		modifyLight = true;
-	}
-	else if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
-		lightPos.x += 0.1; // RIGHT
-		modifyLight = true;
-	}
-	if (altPressed && key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
-		lightRot.x = fmod(lightRot.x - 0.25f, -3.0f);; // ROTATE LEFT
-		modifyLight = true;
-	}
-	else if(key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
-		lightPos.x -= 0.1; // LEFT
-		modifyLight = true;
+	// LIGHT OBJECTS VISIBILITY
+	if (key == GLFW_KEY_KP_0 && action == GLFW_PRESS) {
+		hideLightObjects = !hideLightObjects;
 	}
 
-	//LIGHT TYPE
-	if (key == GLFW_KEY_KP_1 && action == GLFW_PRESS) {
-		lightType = 1;
-		shaderProgram.Activate();
-		glUniform1i(glGetUniformLocation(shaderProgram.ID, "lightType"), lightType);
-	}
-	else if (key == GLFW_KEY_KP_2 && action == GLFW_PRESS) {
-		lightType = 2;
-		shaderProgram.Activate();
-		glUniform1i(glGetUniformLocation(shaderProgram.ID, "lightType"), lightType);
-	}
-	else if (key == GLFW_KEY_KP_3 && action == GLFW_PRESS) {
-		lightType = 3;
-		shaderProgram.Activate();
-		glUniform1i(glGetUniformLocation(shaderProgram.ID, "lightType"), lightType);
-	}
-
-	//LIGHT INTENSITY
-	if (key == GLFW_KEY_KP_SUBTRACT && action == GLFW_PRESS) {
-		lightInten -= 0.5; // DECREASE
-		glUniform1f(glGetUniformLocation(shaderProgram.ID, "lightInten"), lightInten);
-	}
-	if (key == GLFW_KEY_KP_ADD && action == GLFW_PRESS) {
-		lightInten += 0.5; // INCREASE
-		glUniform1f(glGetUniformLocation(shaderProgram.ID, "lightInten"), lightInten);
-	}
-
-	if (modifyLight) {
-		lightModel = glm::mat4(1.0f);  // Reset to identity matrix
-		lightModel = glm::translate(lightModel, lightPos);
-		lightShader.Activate();
-		glUniformMatrix4fv(glGetUniformLocation(lightShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lightModel));
-		shaderProgram.Activate();
-		glUniform3f(glGetUniformLocation(shaderProgram.ID, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
-		glUniform3f(glGetUniformLocation(shaderProgram.ID, "lightRot"), lightRot.x, lightRot.y, lightRot.z);
-
-		modifyLight = false;
+	// Cycle through lights
+	if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
+		selectedLightIndex = (selectedLightIndex + 1) % lights.size();
 	}
 }
 
@@ -219,58 +167,18 @@ void mouseCursorCallback(GLFWwindow* window, double xpos, double ypos) {
 		if (pitch > 89.0f) pitch = 89.0f;
 		if (pitch < -89.0f) pitch = -89.0f;
 
-		// Update the camera rotation based on new yaw and pitch
-		camera.Rotate(pitch, yaw);
+	
+		if (altPressed) {
+			lights[selectedLightIndex].Rotate(pitch, yaw);
+
+		}
+		else
+			// Update the camera rotation based on new yaw and pitch
+			camera.Rotate(pitch, yaw);
 	}
 }
 
-void handleEvents(Shader shader, bool firstCall) {
-
-	// Makes sure to not execute all these more than once in a single while iteration (only true when calling the first time in the while loop)
-	if (firstCall) {
-		currentTime = glfwGetTime();
-		deltaTime = currentTime - lastTime;
-		lastTime = currentTime;
-
-		camera.Move(window, deltaTime);
-		camera.updateMatrix(45.0f, 0.1f, 1000.0f);
-
-		glfwSetWindowSizeCallback(window, windowResizeCallback);
-		glfwSetKeyCallback(window, keyboardCallback);
-		glfwSetMouseButtonCallback(window, mouseButtonCallback);
-		glfwSetCursorPosCallback(window, mouseCursorCallback);
-
-		glUniform3f(glGetUniformLocation(shader.ID, "camPos"), camera.cameraPosition.x, camera.cameraPosition.y, camera.cameraPosition.z);
-		camera.Matrix(shader, "camMatrix");
-	}
-	else {
-		camera.Matrix(shader, "camMatrix");
-	}
-}
-
-void drawWithOutline(Model3D *model) {
-
-	glStencilFunc(GL_ALWAYS, 1, 0xFF);
-	glStencilMask(0xFF);
-	model->Draw(shaderProgram, camera);
-
-	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-	glStencilMask(0x00);
-	glDisable(GL_DEPTH_TEST);
-
-	outlineShader.Activate();
-	model->Draw(outlineShader, camera);
-
-	glStencilMask(0xFF);
-	glStencilFunc(GL_ALWAYS, 0, 0xFF);
-	glEnable(GL_DEPTH_TEST);
-
-	shaderProgram.Activate();
-}
-//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-//MAIN
-int main()
-{
+int initOpenGL() {
 	// Initialize GLFW
 	glfwInit();
 
@@ -282,7 +190,7 @@ int main()
 	// So that means we only have the modern functions
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	// Create a GLFWwindow object of 800 by 800 pixels, naming it "YoutubeOpenGL"
+	// Create a GLFWwindow object of, naming it "OpenGL_v1"
 	window = glfwCreateWindow(width, height, "OpenGL_v1.0", NULL, NULL);
 	// Error check if the window fails to create
 	if (window == NULL)
@@ -311,49 +219,144 @@ int main()
 
 
 	// Specify the viewport of OpenGL in the Window
-	// In this case the viewport goes from x = 0, y = 0, to x = 800, y = 800
 	glViewport(0, 0, width, height);
 
+	return 0;
+}
+
+void loadShaders() {
 	// Shader for the object(s)
 	shaderProgram = Shader("Shaders/default.vert", "Shaders/default.frag");
 	// Shader for light cube
 	lightShader = Shader("Shaders/light.vert", "Shaders/light.frag");
 	// Shader for the outlining of the objects
 	outlineShader = Shader("Shaders/outline.vert", "Shaders/outline.frag");
-	
-	//------------------------------------------------------------------------------------
+}
 
-	lightModel = glm::translate(lightModel, lightPos);
+void initShaders() {
+	//if we want to move the whole scene (all the ordinary objects)
+	//glm::vec3 objPos = glm::vec3(0.0f, 0.0f, 0.0f);
+	//objModel = glm::translate(objModel, objPos);
 
-	glm::vec3 objPos = glm::vec3(0.0f, 0.0f, 0.0f);
-	glm::mat4 objModel = glm::mat4(1.0f);
-	objModel = glm::translate(objModel, objPos);
-
-	lightShader.Activate();
-	glUniformMatrix4fv(glGetUniformLocation(lightShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lightModel));
-	glUniform4f(glGetUniformLocation(lightShader.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
-	
+	// OBJECTS
 	shaderProgram.Activate();
 	glUniformMatrix4fv(glGetUniformLocation(shaderProgram.ID, "model"), 1, GL_FALSE, glm::value_ptr(objModel));
-	glUniform4f(glGetUniformLocation(shaderProgram.ID, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
-	glUniform3f(glGetUniformLocation(shaderProgram.ID, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
-	glUniform3f(glGetUniformLocation(shaderProgram.ID, "lightRot"), lightRot.x, lightRot.y, lightRot.z);
-	glUniform1i(glGetUniformLocation(shaderProgram.ID, "lightType"), lightType);
-	glUniform1f(glGetUniformLocation(shaderProgram.ID, "lightInten"), lightInten);
 
+	// LIGHTS
+	lights.push_back(Light(glm::vec3(0.0f, .0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f, 1));
+	lights.push_back(Light(glm::vec3(0.0f, 2.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 1.0f, 1));
+	for (int i = 0; i < lights.size(); ++i)
+		lights[i].applyUniforms(shaderProgram, lightShader, i, lights.size());
+
+	// OUTLINE
 	outlineShader.Activate();
-	glUniformMatrix4fv(glGetUniformLocation(outlineShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(outlineModel));
+	glUniformMatrix4fv(glGetUniformLocation(outlineShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lights[selectedLightIndex].modelMatrix));
 	glUniform3f(glGetUniformLocation(outlineShader.ID, "camPos"), camera.cameraPosition.x, camera.cameraPosition.y, camera.cameraPosition.z);
 	glUniform4f(glGetUniformLocation(outlineShader.ID, "outlineColor"), outlineColor.x, outlineColor.y, outlineColor.z, outlineColor.w);
 	glUniform1f(glGetUniformLocation(outlineShader.ID, "outline"), 0.03f);
+}
 
-	//------------------------------------------------------------------------------------
-
-	// Loads models
+void loadModels() {
+	// Loads ordinary objects
 	nanosuit.LoadModel("Resources/nanosuit/nanosuit2.obj");
 	ground.LoadModel("Resources/parking_lot/parking_lot.obj");
 	//monkey.LoadModel("Resources/monkey/monkey.obj");
-	lightbulb.LoadModel("Resources/lightbulb/lightbulb.obj");
+
+	// Load light objects
+	for (int i = 0; i < lights.size(); ++i)
+		lights[i].lightbulb.LoadModel("Resources/lightbulb/lightbulb.obj");
+}
+
+void handleEvents(Shader shader, bool firstCall) {
+
+	// Makes sure to not execute all these more than once in a single while iteration (only true when calling the first time in the while loop)
+	if (firstCall) {
+		currentTime = glfwGetTime();
+		deltaTime = currentTime - lastTime;
+		lastTime = currentTime;
+
+		camera.Move(window, deltaTime);
+		camera.updateMatrix(45.0f, 0.1f, 1000.0f);
+
+		lights[selectedLightIndex].Modify(window, deltaTime, camera.cameraFrontDirection, camera.cameraRightDirection);
+		lights[selectedLightIndex].applyUniforms(shaderProgram, lightShader, selectedLightIndex, lights.size());
+
+		glfwSetWindowSizeCallback(window, windowResizeCallback);
+		glfwSetKeyCallback(window, keyboardCallback);
+		glfwSetMouseButtonCallback(window, mouseButtonCallback);
+		glfwSetCursorPosCallback(window, mouseCursorCallback);
+
+		glUniform3f(glGetUniformLocation(shader.ID, "camPos"), camera.cameraPosition.x, camera.cameraPosition.y, camera.cameraPosition.z);
+		camera.Matrix(shader, "camMatrix");
+	}
+	else {
+		camera.Matrix(shader, "camMatrix");
+	}
+}
+
+void drawObjectWithOutline(Model3D* model, Shader& shader) {
+
+	shader.Activate();
+	glStencilFunc(GL_ALWAYS, 1, 0xFF);
+	glStencilMask(0xFF);
+	model->Draw(shader, camera);
+
+	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+	glStencilMask(0x00);
+	glDisable(GL_DEPTH_TEST);
+
+	outlineShader.Activate();
+	glUniformMatrix4fv(glGetUniformLocation(outlineShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(objModel));
+	model->Draw(outlineShader, camera);
+
+	glStencilMask(0xFF);
+	glStencilFunc(GL_ALWAYS, 0, 0xFF);
+	glEnable(GL_DEPTH_TEST);
+
+}
+
+void drawLightWithOutline(Model3D *model, Shader &shader) {
+	
+	shader.Activate();
+	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lights[selectedLightIndex].modelMatrix));
+	glUniform4f(glGetUniformLocation(shader.ID, "lightColor"), lights[selectedLightIndex].color.r, lights[selectedLightIndex].color.g, lights[selectedLightIndex].color.b, 1.0f);
+	glStencilFunc(GL_ALWAYS, 1, 0xFF);
+	glStencilMask(0xFF);
+	model->Draw(shader, camera);
+
+	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+	glStencilMask(0x00);
+	glDisable(GL_DEPTH_TEST);
+
+	outlineShader.Activate();
+	glUniformMatrix4fv(glGetUniformLocation(outlineShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lights[selectedLightIndex].modelMatrix));
+
+	model->Draw(outlineShader, camera);
+
+	glStencilMask(0xFF);
+	glStencilFunc(GL_ALWAYS, 0, 0xFF);
+	glEnable(GL_DEPTH_TEST);
+
+}
+
+void drawLights() {
+	for (int i = 0; i < lights.size(); ++i)
+		if (i != selectedLightIndex) {
+			glUniformMatrix4fv(glGetUniformLocation(lightShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lights[i].modelMatrix));
+			glUniform4f(glGetUniformLocation(lightShader.ID, "lightColor"), lights[i].color.r, lights[i].color.g, lights[i].color.b, lights[i].color.a);
+
+			lights[i].lightbulb.Draw(lightShader, camera);
+		}
+	drawLightWithOutline(&lights[selectedLightIndex].lightbulb, lightShader);
+}
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//MAIN
+int main()
+{
+	initOpenGL();
+	loadShaders();
+	initShaders();
+	loadModels();
 
 	// Main while loop
 	while (!glfwWindowShouldClose(window))
@@ -362,26 +365,32 @@ int main()
 		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 		// Clean the back buffer and assign the new color to it
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-
-		// Tell OpenGL which Shader Program we want to use
-		shaderProgram.Activate();	
+		
 		//handles all Inputs
 		handleEvents(shaderProgram, true);
 
-		//nanosuit.Draw(shaderProgram, camera);
-		ground.Draw(shaderProgram, camera);
-		//monkey.Draw(shaderProgram, camera);
-		lightbulb.Draw(lightShader, camera);
-		drawWithOutline(&nanosuit);
+		//Draw ordinary objects
+		shaderProgram.Activate();
+		if (rasterizeMode == 0) {
+			nanosuit.Draw(shaderProgram, camera);
+			ground.Draw(shaderProgram, camera);
+		}
+		else {
+			drawObjectWithOutline(&nanosuit, shaderProgram);
+			drawObjectWithOutline(&ground, shaderProgram);
+		}
+
+		if (!hideLightObjects) {
+			//Draw light objects
+			lightShader.Activate();
+			drawLights();
+		}
 
 		// Swap the back buffer with the front buffer
 		glfwSwapBuffers(window);
 		// Take care of all GLFW events
 		glfwPollEvents();
 	}
-
-
 
 	// Delete all the objects we've created
 	shaderProgram.Delete();

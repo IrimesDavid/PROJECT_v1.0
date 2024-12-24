@@ -18,7 +18,7 @@ out vec3 color;
 out vec2 texCoord;
 
 uniform mat4 camMatrix;
-// Model matrix for the pyramid
+// Model matrix for the object
 uniform mat4 model;
 
 void main(){

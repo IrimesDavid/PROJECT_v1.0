@@ -1,12 +1,15 @@
 #include "Light.h"
 
-Light::Light(glm::vec3 position, glm::vec4 color) {
+Light::Light(glm::vec3 pos, glm::vec3 rot, glm::vec4 col, float inten, int t) {
 
-	Light::lightPosition = position;
-	Light::lightColor = color;
+	Light::position = pos;
+	Light::color = col;
+	Light::intensity = inten;
+	Light::type = t;
+	modelMatrix = glm::translate(modelMatrix, position);
 
 	// Calculate the initial light front direction
-	lightFrontDirection = glm::normalize(lightTarget - lightPosition);
+	lightFrontDirection = glm::normalize(lightTarget - position);
 	// Calculate the initial right direction
 	lightRightDirection = glm::normalize(glm::cross(lightFrontDirection, lightUpDirection));
 }
@@ -18,52 +21,88 @@ void Light::updateMatrix(float FOVdeg, float nearPlane, float farPlane)
 	glm::mat4 projection = glm::mat4(1.0f);
 
 	// Makes light look in the right direction from the right position
-	view = glm::lookAt(lightPosition, lightPosition + lightFrontDirection, lightUpDirection);
+	view = glm::lookAt(position, position + lightFrontDirection, lightUpDirection);
 	// Adds perspective to the scene
 	projection = glm::perspective(glm::radians(FOVdeg), (float)width / height, nearPlane, farPlane);
 
 	// Sets new light matrix
-	lightModel = projection * view;
+	lightMatrix = projection * view;
 }
 
-void Light::Matrix(Shader& shader, const char* uniform) {
-	// Exports light matrix
-	glUniformMatrix4fv(glGetUniformLocation(shader.ID, uniform), 1, GL_FALSE, glm::value_ptr(lightModel));
-}
+void Light::Modify(GLFWwindow* window, float deltaTime, glm::vec3 cameraFrontDirection, glm::vec3 cameraRightDirection) {
 
+	// note: forwardDirection wont influence the height (and we use camera's front and right directions)
+	cameraFrontDirection = glm::normalize(glm::vec3(cameraFrontDirection.x, 0, cameraFrontDirection.z));
+	bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
 
-void Light::Move(GLFWwindow* window, float deltaTime) {
-
-	// light movement
+	// LIGHT MOVEMENT
 	float normalSpeed = speed * deltaTime;
 
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-		lightPosition += normalSpeed * lightFrontDirection;
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+		if(shiftPressed)
+			position += normalSpeed * lightUp;
+		else
+			position += normalSpeed * cameraFrontDirection;  //front
 	}
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-		lightPosition += normalSpeed * -lightRightDirection;
+	if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+		position += normalSpeed * -cameraRightDirection; //left
 	}
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-		lightPosition += normalSpeed * -lightFrontDirection;
+	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+		if (shiftPressed)
+			position += normalSpeed * -lightUp;
+		else
+			position += normalSpeed * -cameraFrontDirection; //backward
 	}
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-		lightPosition += normalSpeed * lightRightDirection;
+	if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+		position += normalSpeed * cameraRightDirection; //right
 	}
-	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-		lightPosition += normalSpeed * lightUp;
+
+	//LIGHT TYPE
+	if (glfwGetKey(window, GLFW_KEY_KP_1) == GLFW_PRESS) {
+		type = 1;
 	}
-	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
-		lightPosition += normalSpeed * -lightUp;
+	else if (glfwGetKey(window, GLFW_KEY_KP_2) == GLFW_PRESS) {
+		type = 2;
 	}
-	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-		speed = 0.8f;
+	else if (glfwGetKey(window, GLFW_KEY_KP_3) == GLFW_PRESS) {
+		type = 3;
 	}
-	else if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE) {
-		speed = 0.4f;
+
+	//LIGHT INTENSITY / RGB values
+	if (glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS) {
+		if (glfwGetKey(window, GLFW_KEY_KP_4) == GLFW_PRESS) {
+			color.x = std::max(color.x - normalSpeed * 15, 0.0f);
+		}
+		else if (glfwGetKey(window, GLFW_KEY_KP_5) == GLFW_PRESS) {
+			color.y = std::max(color.y - normalSpeed * 15, 0.0f);
+		}
+		else if (glfwGetKey(window, GLFW_KEY_KP_6) == GLFW_PRESS) {
+			color.z = std::max(color.z - normalSpeed * 15, 0.0f);
+		}
+		else {
+			intensity = std::max(intensity - (normalSpeed * 15), 0.0f);
+		}
 	}
+	else if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS) {
+		if (glfwGetKey(window, GLFW_KEY_KP_4) == GLFW_PRESS) {
+			color.x = std::min(color.x + normalSpeed * 15, 1.0f);
+		}
+		else if (glfwGetKey(window, GLFW_KEY_KP_5) == GLFW_PRESS) {
+			color.y = std::min(color.y + normalSpeed * 15, 1.0f);
+		}
+		else if (glfwGetKey(window, GLFW_KEY_KP_6) == GLFW_PRESS) {
+			color.z = std::min(color.z + normalSpeed * 15, 1.0f);
+		}
+		else {
+			intensity = std::min(intensity + normalSpeed * 15, 30.0f);
+		}
+	}
+
+	// Make sure to reflect the changes
+	modelMatrix = glm::translate(glm::mat4(1.0f), position);
 }
 
-//light rotation
+//LIGHT ROTATION
 //yaw - light rotation around the y axis
 //pitch - light rotation around the x axis
 void Light::Rotate(float pitch, float yaw) {
@@ -76,4 +115,18 @@ void Light::Rotate(float pitch, float yaw) {
 	// Recalculate right and up directions
 	lightRightDirection = glm::normalize(glm::cross(lightFrontDirection, lightUp));
 	lightUpDirection = glm::normalize(glm::cross(lightRightDirection, lightFrontDirection));
+
+}
+
+void Light::applyUniforms(Shader& baseShader, Shader& lightObjShader, int index, int numLigths) {
+
+	std::string base = "lights[" + std::to_string(index) + "]";
+
+	baseShader.Activate();
+	glUniform4f(glGetUniformLocation(baseShader.ID, (base + ".lightColor").c_str()), color.r, color.g, color.b, color.a);
+	glUniform3f(glGetUniformLocation(baseShader.ID, (base + ".lightPos").c_str()), position.x, position.y, position.z);
+	glUniform3f(glGetUniformLocation(baseShader.ID, (base + ".lightRot").c_str()), lightFrontDirection.x, lightFrontDirection.y, lightFrontDirection.z);
+	glUniform1f(glGetUniformLocation(baseShader.ID, (base + ".lightInten").c_str()), intensity);
+	glUniform1i(glGetUniformLocation(baseShader.ID, (base + ".lightType").c_str()), type);
+	glUniform1i(glGetUniformLocation(baseShader.ID, "numLights"), numLigths);
 }
