@@ -25,7 +25,7 @@ public:
 	int width;
 	int height;
 
-	float speed = 0.8f;
+	float speed = 1.0f;
 	float sensitivity = 0.1f;
 
 	glm::mat4 cameraMatrix = glm::mat4(1.0f);

@@ -27,9 +27,14 @@ void Mesh::Draw(Shader& shader, Camera& camera) {
 
 	//set textures
 	for (GLuint i = 0; i < textures.size(); i++) {
-
 		this->textures[i].texUnit(shader, this->textures[i].type.c_str(), i);
 		this->textures[i].Bind(i);
+
+		if (this->textures[i].type == "alphaTex") {
+			glUniform1i(glGetUniformLocation(shader.ID, "hasAlphaTex"), 1);
+		}
+		else
+			glUniform1i(glGetUniformLocation(shader.ID, "hasAlphaTex"), 0);
 	}
 
 	vao.Bind();

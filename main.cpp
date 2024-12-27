@@ -42,7 +42,7 @@ glm::mat4 outlineModel = glm::mat4(1.0f);
 //3D Objects
 Model3D nanosuit;
 Model3D ground;
-Model3D monkey;
+Model3D glass;
 glm::mat4 objModel = glm::mat4(1.0f);
 int rasterizeMode = 0;
 
@@ -89,7 +89,11 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 	
 	// Cycle through rasterizeModes
 	if (glfwGetKey(window, GLFW_KEY_GRAVE_ACCENT) == GLFW_PRESS) {
-		rasterizeMode = (rasterizeMode + 1) % 2; //for now only 2 modes: with or without outline
+		rasterizeMode = (rasterizeMode + 1) % 3; //for now only 2 modes: with or without outline
+		if (rasterizeMode == 2)
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		else
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 
 	// Check if Alt is pressed
@@ -123,9 +127,35 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 		hideLightObjects = !hideLightObjects;
 	}
 
+	// ADD LIGHT
+	if (key == GLFW_KEY_KP_ENTER && action == GLFW_PRESS) {
+		lights.push_back(Light(camera.cameraPosition, glm::vec3(0.0f, -1.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f, 2));
+		selectedLightIndex = lights.size() - 1;
+		for(int i = 0; i < lights.size(); ++i)
+			lights[i].lightbulb.LoadModel("Resources/lightbulb/lightbulb.obj");
+	}
+
+	// REMOVE LIGHT
+	if (key == GLFW_KEY_KP_DECIMAL && action == GLFW_PRESS) {
+		if (lights.size() >= 1) {
+			if (lights.size() == 1) {
+				lights.clear();
+
+				shaderProgram.Activate();
+				glUniform4f(glGetUniformLocation(shaderProgram.ID, "lights[0].lightColor"), 0.0f, 0.0f, 0.0f, 0.0f);
+			}
+			else {
+				swap(lights[selectedLightIndex], lights.back());
+				lights.pop_back();
+				selectedLightIndex %= lights.size();
+			}
+		}
+	}
+
 	// Cycle through lights
 	if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
-		selectedLightIndex = (selectedLightIndex + 1) % lights.size();
+		if(!lights.empty())
+			selectedLightIndex = (selectedLightIndex + 1) % lights.size();
 	}
 }
 
@@ -169,7 +199,8 @@ void mouseCursorCallback(GLFWwindow* window, double xpos, double ypos) {
 
 	
 		if (altPressed) {
-			lights[selectedLightIndex].Rotate(pitch, yaw);
+			if(!lights.empty())
+				lights[selectedLightIndex].Rotate(pitch, yaw);
 
 		}
 		else
@@ -212,11 +243,14 @@ int initOpenGL() {
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CCW);
 	// Enables gamma correction when writing to an sRGB framebuffer
-	glEnable(GL_FRAMEBUFFER_SRGB);
+	//glEnable(GL_FRAMEBUFFER_SRGB);
 	// Enables stencil buffer
 	glEnable(GL_STENCIL_TEST);
 	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-
+	// for blending (semi-transparent objects) //it doesnt work >:(
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendEquation(GL_FUNC_ADD);
 
 	// Specify the viewport of OpenGL in the Window
 	glViewport(0, 0, width, height);
@@ -243,8 +277,7 @@ void initShaders() {
 	glUniformMatrix4fv(glGetUniformLocation(shaderProgram.ID, "model"), 1, GL_FALSE, glm::value_ptr(objModel));
 
 	// LIGHTS
-	lights.push_back(Light(glm::vec3(0.0f, .0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f, 1));
-	lights.push_back(Light(glm::vec3(0.0f, 2.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 1.0f, 1));
+	lights.push_back(Light(glm::vec3(0.0f, 3.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f, 2));
 	for (int i = 0; i < lights.size(); ++i)
 		lights[i].applyUniforms(shaderProgram, lightShader, i, lights.size());
 
@@ -260,7 +293,7 @@ void loadModels() {
 	// Loads ordinary objects
 	nanosuit.LoadModel("Resources/nanosuit/nanosuit2.obj");
 	ground.LoadModel("Resources/parking_lot/parking_lot.obj");
-	//monkey.LoadModel("Resources/monkey/monkey.obj");
+	glass.LoadModel("Resources/glass/glass.obj");
 
 	// Load light objects
 	for (int i = 0; i < lights.size(); ++i)
@@ -278,8 +311,10 @@ void handleEvents(Shader shader, bool firstCall) {
 		camera.Move(window, deltaTime);
 		camera.updateMatrix(45.0f, 0.1f, 1000.0f);
 
-		lights[selectedLightIndex].Modify(window, deltaTime, camera.cameraFrontDirection, camera.cameraRightDirection);
-		lights[selectedLightIndex].applyUniforms(shaderProgram, lightShader, selectedLightIndex, lights.size());
+		if (!lights.empty()) {
+			lights[selectedLightIndex].Modify(window, deltaTime, camera.cameraFrontDirection, camera.cameraRightDirection);
+			lights[selectedLightIndex].applyUniforms(shaderProgram, lightShader, selectedLightIndex, lights.size());
+		}
 
 		glfwSetWindowSizeCallback(window, windowResizeCallback);
 		glfwSetKeyCallback(window, keyboardCallback);
@@ -316,38 +351,40 @@ void drawObjectWithOutline(Model3D* model, Shader& shader) {
 }
 
 void drawLightWithOutline(Model3D *model, Shader &shader) {
-	
-	shader.Activate();
-	glUniformMatrix4fv(glGetUniformLocation(shader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lights[selectedLightIndex].modelMatrix));
-	glUniform4f(glGetUniformLocation(shader.ID, "lightColor"), lights[selectedLightIndex].color.r, lights[selectedLightIndex].color.g, lights[selectedLightIndex].color.b, 1.0f);
-	glStencilFunc(GL_ALWAYS, 1, 0xFF);
-	glStencilMask(0xFF);
-	model->Draw(shader, camera);
+	if (!lights.empty()) {
+		shader.Activate();
+		glUniformMatrix4fv(glGetUniformLocation(shader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lights[selectedLightIndex].modelMatrix));
+		glUniform4f(glGetUniformLocation(shader.ID, "lightColor"), lights[selectedLightIndex].color.r, lights[selectedLightIndex].color.g, lights[selectedLightIndex].color.b, 1.0f);
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glStencilMask(0xFF);
+		model->Draw(shader, camera);
 
-	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-	glStencilMask(0x00);
-	glDisable(GL_DEPTH_TEST);
+		glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+		glStencilMask(0x00);
+		glDisable(GL_DEPTH_TEST);
 
-	outlineShader.Activate();
-	glUniformMatrix4fv(glGetUniformLocation(outlineShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lights[selectedLightIndex].modelMatrix));
+		outlineShader.Activate();
+		glUniformMatrix4fv(glGetUniformLocation(outlineShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lights[selectedLightIndex].modelMatrix));
 
-	model->Draw(outlineShader, camera);
+		model->Draw(outlineShader, camera);
 
-	glStencilMask(0xFF);
-	glStencilFunc(GL_ALWAYS, 0, 0xFF);
-	glEnable(GL_DEPTH_TEST);
-
+		glStencilMask(0xFF);
+		glStencilFunc(GL_ALWAYS, 0, 0xFF);
+		glEnable(GL_DEPTH_TEST);
+	}
 }
 
 void drawLights() {
-	for (int i = 0; i < lights.size(); ++i)
-		if (i != selectedLightIndex) {
-			glUniformMatrix4fv(glGetUniformLocation(lightShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lights[i].modelMatrix));
-			glUniform4f(glGetUniformLocation(lightShader.ID, "lightColor"), lights[i].color.r, lights[i].color.g, lights[i].color.b, lights[i].color.a);
+	if (!lights.empty()) {
+		for (int i = 0; i < lights.size(); ++i)
+			if (i != selectedLightIndex) {
+				glUniformMatrix4fv(glGetUniformLocation(lightShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(lights[i].modelMatrix));
+				glUniform4f(glGetUniformLocation(lightShader.ID, "lightColor"), lights[i].color.r, lights[i].color.g, lights[i].color.b, lights[i].color.a);
 
-			lights[i].lightbulb.Draw(lightShader, camera);
-		}
-	drawLightWithOutline(&lights[selectedLightIndex].lightbulb, lightShader);
+				lights[i].lightbulb.Draw(lightShader, camera);
+			}
+		drawLightWithOutline(&lights[selectedLightIndex].lightbulb, lightShader);
+	}
 }
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //MAIN
@@ -371,14 +408,26 @@ int main()
 
 		//Draw ordinary objects
 		shaderProgram.Activate();
-		if (rasterizeMode == 0) {
-			nanosuit.Draw(shaderProgram, camera);
-			ground.Draw(shaderProgram, camera);
+		switch (rasterizeMode) {
+			case 0:
+				nanosuit.Draw(shaderProgram, camera);
+				ground.Draw(shaderProgram, camera);
+				break;
+			case 1:
+				drawObjectWithOutline(&nanosuit, shaderProgram);
+				drawObjectWithOutline(&ground, shaderProgram);
+				break;
+			default:
+				nanosuit.Draw(shaderProgram, camera);
+				ground.Draw(shaderProgram, camera);
+				break;
 		}
-		else {
-			drawObjectWithOutline(&nanosuit, shaderProgram);
-			drawObjectWithOutline(&ground, shaderProgram);
-		}
+
+		glDisable(GL_CULL_FACE);
+		glDisable(GL_DEPTH_TEST);
+		glass.Draw(shaderProgram, camera);
+		glEnable(GL_CULL_FACE);
+		glEnable(GL_DEPTH_TEST);
 
 		if (!hideLightObjects) {
 			//Draw light objects

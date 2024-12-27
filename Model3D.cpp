@@ -1,6 +1,27 @@
 #include "Model3D.hpp"
+	
+	void Model3D::Unload() {
+		// Clear textures
+		for (size_t i = 0; i < loadedTextures.size(); i++) {
+			glDeleteTextures(1, &loadedTextures.at(i).ID);
+		}
+		loadedTextures.clear();
+
+		// Clear meshes
+		for (size_t i = 0; i < meshes.size(); i++) {
+			GLuint VBO = meshes.at(i).vbo.ID;
+			GLuint EBO = meshes.at(i).ebo.ID;
+			GLuint VAO = meshes.at(i).vao.ID;
+			glDeleteBuffers(1, &VBO);
+			glDeleteBuffers(1, &EBO);
+			glDeleteVertexArrays(1, &VAO);
+		}
+		meshes.clear();
+	}
 
 	void Model3D::LoadModel(std::string fileName) {
+		// Clean up old data before loading the new model
+		Unload();
 
         std::string basePath = fileName.substr(0, fileName.find_last_of('/')) + "/";
 		ReadOBJ(fileName, basePath);
@@ -139,6 +160,16 @@
 
 						Texture currentTexture;
 						currentTexture = LoadTexture(basePath + specularTexturePath, "specularTex");
+						textures.push_back(currentTexture);
+					}
+
+					//alpha/opacity texture
+					std::string alphaTexturePath = materials[materialId].alpha_texname;
+
+					if (!alphaTexturePath.empty()) {
+
+						Texture currentTexture;
+						currentTexture = LoadTexture(basePath + alphaTexturePath, "alphaTex");
 						textures.push_back(currentTexture);
 					}
 				}

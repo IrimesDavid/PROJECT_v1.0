@@ -1,6 +1,7 @@
 #ifndef light_CLASS_H
 #define light_CLASS_H
 
+#include <utility> // for std::swap
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -31,8 +32,8 @@ public:
 	int width = 50;
 	int height = 50;
 
-	float speed = 0.4f;
-	float sensitivity = 0.1f;
+	float speed = 1.0f;
+	float sensitivity = 0.05f;
 
 	glm::mat4 modelMatrix = glm::mat4(1.0f);
 	glm::mat4 lightMatrix = glm::mat4(1.0f);
@@ -47,6 +48,8 @@ public:
 	void Rotate(float pitch, float yaw);
 	// Self explanatory
 	void applyUniforms(Shader& baseShader, Shader& lightObjShader, int index, int numLights);
+
+	friend void swap(Light& a, Light& b) noexcept;
 };
 
 #endif

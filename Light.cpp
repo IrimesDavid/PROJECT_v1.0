@@ -130,3 +130,24 @@ void Light::applyUniforms(Shader& baseShader, Shader& lightObjShader, int index,
 	glUniform1i(glGetUniformLocation(baseShader.ID, (base + ".lightType").c_str()), type);
 	glUniform1i(glGetUniformLocation(baseShader.ID, "numLights"), numLigths);
 }
+
+void swap(Light& a, Light& b) noexcept {
+	using std::swap;
+
+	// Swap the member variables of Light class
+	swap(a.position, b.position);
+	swap(a.color, b.color);
+	swap(a.intensity, b.intensity);
+	swap(a.type, b.type);
+	swap(a.modelMatrix, b.modelMatrix);
+	swap(a.lightMatrix, b.lightMatrix);
+	swap(a.lightFrontDirection, b.lightFrontDirection);
+	swap(a.lightRightDirection, b.lightRightDirection);
+	swap(a.lightUpDirection, b.lightUpDirection);
+	swap(a.lightTarget, b.lightTarget);
+	swap(a.lightbulb, b.lightbulb);
+	swap(a.width, b.width);
+	swap(a.height, b.height);
+	swap(a.speed, b.speed);
+	swap(a.sensitivity, b.sensitivity);
+}

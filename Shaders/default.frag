@@ -10,6 +10,9 @@ in vec2 texCoord;
 uniform sampler2D diffuseTex;
 uniform sampler2D specularTex;
 uniform sampler2D ambientTex;
+uniform sampler2D alphaTex;
+
+uniform int hasAlphaTex = 0; //by default, no alpha texture
 
 // Light structure definition
 struct Light {
@@ -50,6 +53,9 @@ vec4 pointLight(Light light){
     float fallbackSpecularTex = texture(specularTex, texCoord).r; 
     if(fallbackSpecularTex == 0.0f) fallbackSpecularTex = 1.0f;
 
+    if(hasAlphaTex == 1 && texture(alphaTex, texCoord).r < 0.1)
+        discard;
+
     return (texture(diffuseTex, texCoord) * (diffuse * inten + texture(ambientTex, texCoord) * ambient) * light.lightInten + fallbackSpecularTex * specular * inten * 0.25) * light.lightColor;
 }
 
@@ -67,6 +73,9 @@ vec4 directionalLight(Light light){
     float specular = specAmount * specularLight;
     float fallbackSpecularTex = texture(specularTex, texCoord).r; 
     if(fallbackSpecularTex == 0.0f) fallbackSpecularTex = 1.0f;
+
+    if(hasAlphaTex == 1 && texture(alphaTex, texCoord).r < 0.1)
+        discard;
 
     return (texture(diffuseTex, texCoord) * (diffuse + texture(ambientTex, texCoord) * ambient) * light.lightInten + fallbackSpecularTex * specular * light.lightInten * 0.25) * light.lightColor;
 }
@@ -93,6 +102,9 @@ vec4 spotLight(Light light){
 
     float angle = dot(light.lightRot, -lightDirection);
     float inten = clamp((angle - outerCone) / (innerCone - outerCone), 0.0f, 1.0f) * light.lightInten;
+
+    if(hasAlphaTex == 1 && texture(alphaTex, texCoord).r < 0.1)
+        discard;
 
     return (texture(diffuseTex, texCoord) * (diffuse * inten + texture(ambientTex, texCoord) * ambient) + fallbackSpecularTex * specular * inten * light.lightInten * 0.1) * light.lightColor;
 }

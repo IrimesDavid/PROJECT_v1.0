@@ -15,6 +15,8 @@
     public:
         ~Model3D();
 
+		void Unload();
+
 		void LoadModel(std::string fileName);
 
 		void LoadModel(std::string fileName, std::string basePath);
