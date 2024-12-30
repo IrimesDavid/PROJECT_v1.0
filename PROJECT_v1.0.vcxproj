@@ -149,6 +149,7 @@
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Model3D.cpp" />
     <ClCompile Include="shaderClass.cpp" />
+    <ClCompile Include="Skybox.cpp" />
     <ClCompile Include="stb.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="tiny_obj_loader.cpp" />
@@ -162,6 +163,7 @@
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Model3D.hpp" />
     <ClInclude Include="shaderClass.h" />
+    <ClInclude Include="Skybox.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="tiny_obj_loader.h" />
     <ClInclude Include="VAO.h" />
@@ -180,6 +182,10 @@
     <None Include="Shaders\light.vert" />
     <None Include="Shaders\outline.frag" />
     <None Include="Shaders\outline.vert" />
+    <None Include="Shaders\shadow.frag" />
+    <None Include="Shaders\shadow.vert" />
+    <None Include="skybox.frag" />
+    <None Include="skybox.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

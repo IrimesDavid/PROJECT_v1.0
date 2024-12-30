@@ -41,7 +41,7 @@ void Mesh::Draw(Shader& shader, Camera& camera) {
 	glDrawElements(GL_TRIANGLES, (GLsizei)this->indices.size(), GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 
-	// Bind no texture if there's none, instead of binding a texture from another mesh
+	//  Unbind all textures
 	for (GLuint i = 0; i < this->textures.size(); i++) {
 
 		glActiveTexture(GL_TEXTURE0 + i);

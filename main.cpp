@@ -9,11 +9,12 @@ namespace fs = std::filesystem;
 #include "Mesh.h" // this one contains all the other headers
 #include "Model3D.hpp"
 #include "Light.h"
+#include "Skybox.h"
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //DATA
 
-const unsigned int width = 1600;
-const unsigned int height = 900;
+int viewportWidth = 1600;
+int viewportHeight = 900;
 
 int retina_width, retina_height; //for proper scaling
 
@@ -22,7 +23,7 @@ float lastTime = 0.0f;
 float deltaTime;
 
 GLFWwindow* window;
-Camera camera(width, height, glm::vec3(0.0f, 2.0f, 2.0f));
+Camera camera(viewportWidth, viewportHeight, glm::vec3(0.0f, 2.0f, 2.0f));
 //Mouse movement
 float lastX = 800, lastY = 450; // Initial center position (assuming 800x600 window)
 bool firstMouse = true;          // Tracks if it's the first mouse movement
@@ -50,6 +51,20 @@ int rasterizeMode = 0;
 Shader lightShader;
 Shader shaderProgram;
 Shader outlineShader;
+Shader skyboxShader;
+Shader shadowShader;
+
+//SKYBOX
+SkyBox mySkyBox;
+
+// for anti-aliasing
+unsigned int samples = 8;
+
+// SHADOW
+//FRAME BUFFER FOR SHADOW MAP (DIRECTIONAL LIGHTS) -> orthogonal projection
+unsigned int shadowMapFBO;
+unsigned int shadowMapWidth = 4096, shadowMapHeight = 4096;
+unsigned int shadowMap;
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //FUNCTIONS
 
@@ -59,8 +74,8 @@ void windowResizeCallback(GLFWwindow* window, int newWidth, int newHeight) {
 		return;  // Avoid setting an invalid viewport when the window is minimized
 	}
 
-	float viewportWidth = newWidth;
-	float viewportHeight = newHeight;
+	viewportWidth = newWidth;
+	viewportHeight = newHeight;
 
 	// Calculate the offset to center the viewport (horizontal centering)
 	int offsetX = (newWidth - viewportWidth) / 2;
@@ -217,12 +232,14 @@ int initOpenGL() {
 	// In this case we are using OpenGL 3.3
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	//for anti-aliasing
+	glfwWindowHint(GLFW_SAMPLES, samples);
 	// Tell GLFW we are using the CORE profile
 	// So that means we only have the modern functions
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Create a GLFWwindow object of, naming it "OpenGL_v1"
-	window = glfwCreateWindow(width, height, "OpenGL_v1.0", NULL, NULL);
+	window = glfwCreateWindow(viewportWidth, viewportHeight, "OpenGL_v1.0", NULL, NULL);
 	// Error check if the window fails to create
 	if (window == NULL)
 	{
@@ -235,25 +252,52 @@ int initOpenGL() {
 
 	//Load GLAD so it configures OpenGL
 	gladLoadGL();
+
 	// enables the DepthBuffer
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
+
+	// for anti-aliasing
+	glEnable(GL_MULTISAMPLE);
+
 	// enables backface culling
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CCW);
+
 	// Enables gamma correction when writing to an sRGB framebuffer
 	//glEnable(GL_FRAMEBUFFER_SRGB);
+	// 
 	// Enables stencil buffer
 	glEnable(GL_STENCIL_TEST);
 	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+
 	// for blending (semi-transparent objects) //it doesnt work >:(
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBlendEquation(GL_FUNC_ADD);
 
 	// Specify the viewport of OpenGL in the Window
-	glViewport(0, 0, width, height);
+	glViewport(0, 0, viewportWidth, viewportHeight);
+
+	// init Shadow Map
+	glGenFramebuffers(1, &shadowMapFBO);
+
+	glGenTextures(1, &shadowMap);
+	glBindTexture(GL_TEXTURE_2D, shadowMap);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadowMapWidth, shadowMapHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float clampColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, clampColor);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowMap, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	return 0;
 }
@@ -265,6 +309,10 @@ void loadShaders() {
 	lightShader = Shader("Shaders/light.vert", "Shaders/light.frag");
 	// Shader for the outlining of the objects
 	outlineShader = Shader("Shaders/outline.vert", "Shaders/outline.frag");
+	// Shader for the skybox
+	skyboxShader = Shader("Shaders/skybox.vert", "Shaders/skybox.frag");
+	// Shader for cast shadows
+	shadowShader = Shader("Shaders/shadow.vert", "Shaders/shadow.frag");
 }
 
 void initShaders() {
@@ -277,9 +325,9 @@ void initShaders() {
 	glUniformMatrix4fv(glGetUniformLocation(shaderProgram.ID, "model"), 1, GL_FALSE, glm::value_ptr(objModel));
 
 	// LIGHTS
-	lights.push_back(Light(glm::vec3(0.0f, 3.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f, 2));
+	lights.push_back(Light(glm::vec3(1.5f, 1.5f, 1.5f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f, 2));
 	for (int i = 0; i < lights.size(); ++i)
-		lights[i].applyUniforms(shaderProgram, lightShader, i, lights.size());
+		lights[i].applyUniforms(shaderProgram, shadowShader, i, lights.size());
 
 	// OUTLINE
 	outlineShader.Activate();
@@ -287,6 +335,18 @@ void initShaders() {
 	glUniform3f(glGetUniformLocation(outlineShader.ID, "camPos"), camera.cameraPosition.x, camera.cameraPosition.y, camera.cameraPosition.z);
 	glUniform4f(glGetUniformLocation(outlineShader.ID, "outlineColor"), outlineColor.x, outlineColor.y, outlineColor.z, outlineColor.w);
 	glUniform1f(glGetUniformLocation(outlineShader.ID, "outline"), 0.03f);
+
+	//SKYBOX
+	mySkyBox.setSkybox("Resources/skybox/skybox2/");
+
+	//SHADOW
+	shadowShader.Activate();
+	glUniformMatrix4fv(glGetUniformLocation(shadowShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(objModel));
+
+	//for (int i = 0; i < lights.size(); ++i) {
+	//	glUniformMatrix4fv(glGetUniformLocation(shadowShader.ID, ("lightProjection[" + std::to_string(i) + "]").c_str()), 1, GL_FALSE, glm::value_ptr(lights[i].lightProjectionMat));
+	//}
+
 }
 
 void loadModels() {
@@ -313,13 +373,19 @@ void handleEvents(Shader shader, bool firstCall) {
 
 		if (!lights.empty()) {
 			lights[selectedLightIndex].Modify(window, deltaTime, camera.cameraFrontDirection, camera.cameraRightDirection);
-			lights[selectedLightIndex].applyUniforms(shaderProgram, lightShader, selectedLightIndex, lights.size());
-		}
+			lights[selectedLightIndex].applyUniforms(shaderProgram, shadowShader, selectedLightIndex, lights.size());
+			lights[selectedLightIndex].updateMatrix(90.0f, 0.5f, 100.0f);
 
-		glfwSetWindowSizeCallback(window, windowResizeCallback);
+			shadowShader.Activate();
+			glUniformMatrix4fv(glGetUniformLocation(shadowShader.ID, ("lightProjection[" + std::to_string(selectedLightIndex) + "]").c_str()), 1, GL_FALSE, glm::value_ptr(lights[selectedLightIndex].lightProjectionMat));
+
+			shaderProgram.Activate();
+			glUniformMatrix4fv(glGetUniformLocation(shaderProgram.ID, ("lightProjection[" + std::to_string(selectedLightIndex) + "]").c_str()), 1, GL_FALSE, glm::value_ptr(lights[selectedLightIndex].lightProjectionMat));
+		}
 		glfwSetKeyCallback(window, keyboardCallback);
 		glfwSetMouseButtonCallback(window, mouseButtonCallback);
 		glfwSetCursorPosCallback(window, mouseCursorCallback);
+		glfwSetWindowSizeCallback(window, windowResizeCallback);
 
 		glUniform3f(glGetUniformLocation(shader.ID, "camPos"), camera.cameraPosition.x, camera.cameraPosition.y, camera.cameraPosition.z);
 		camera.Matrix(shader, "camMatrix");
@@ -395,10 +461,11 @@ int main()
 	initShaders();
 	loadModels();
 
+
 	// Main while loop
 	while (!glfwWindowShouldClose(window))
 	{
-		// Specify the color of the background
+		// Specify the color of the backgrounds
 		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 		// Clean the back buffer and assign the new color to it
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -406,8 +473,31 @@ int main()
 		//handles all Inputs
 		handleEvents(shaderProgram, true);
 
+		// Draw the skybox
+		mySkyBox.Draw(skyboxShader, camera.view, camera.projection);
+
+		// Draw cast shadows
+		glViewport(0, 0, shadowMapWidth, shadowMapHeight);
+		glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+		glClear(GL_DEPTH_BUFFER_BIT);
+
+		shadowShader.Activate();
+
+		nanosuit.Draw(shadowShader, camera);
+		ground.Draw(shadowShader, camera);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, viewportWidth, viewportHeight);
+
 		//Draw ordinary objects
+		// Send the light matrix to the shader
 		shaderProgram.Activate();
+
+		// Bind the Shadow Map
+		glActiveTexture(GL_TEXTURE0 + 2);
+		glBindTexture(GL_TEXTURE_2D, shadowMap);
+		glUniform1i(glGetUniformLocation(shaderProgram.ID, "shadowMap"), 2);
+
 		switch (rasterizeMode) {
 			case 0:
 				nanosuit.Draw(shaderProgram, camera);
@@ -423,14 +513,11 @@ int main()
 				break;
 		}
 
-		glDisable(GL_CULL_FACE);
-		glDisable(GL_DEPTH_TEST);
+		// Draw transparent objects last
 		glass.Draw(shaderProgram, camera);
-		glEnable(GL_CULL_FACE);
-		glEnable(GL_DEPTH_TEST);
 
+		//Draw light objects
 		if (!hideLightObjects) {
-			//Draw light objects
 			lightShader.Activate();
 			drawLights();
 		}

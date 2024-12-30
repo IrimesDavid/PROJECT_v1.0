@@ -20,13 +20,19 @@ void Light::updateMatrix(float FOVdeg, float nearPlane, float farPlane)
 	glm::mat4 view = glm::mat4(1.0f);
 	glm::mat4 projection = glm::mat4(1.0f);
 
-	// Makes light look in the right direction from the right position
-	view = glm::lookAt(position, position + lightFrontDirection, lightUpDirection);
 	// Adds perspective to the scene
-	projection = glm::perspective(glm::radians(FOVdeg), (float)width / height, nearPlane, farPlane);
+	if (this->type == 1) {
+		projection = glm::ortho(-25.0f, 25.0f, -25.0f, 25.0f, nearPlane, farPlane);
+		view = glm::lookAt(10.0f * position, position + lightFrontDirection, lightUpDirection);
 
-	// Sets new light matrix
-	lightMatrix = projection * view;
+		lightProjectionMat = projection * view;
+	}
+	else {
+		projection = glm::perspective(glm::radians(FOVdeg), 1.0f, nearPlane, farPlane);
+		view = glm::lookAt(position, position + lightFrontDirection, glm::vec3(0.0f, 1.0f, 0.0f));
+
+		lightProjectionMat = projection * view;
+	}
 }
 
 void Light::Modify(GLFWwindow* window, float deltaTime, glm::vec3 cameraFrontDirection, glm::vec3 cameraRightDirection) {
@@ -98,6 +104,12 @@ void Light::Modify(GLFWwindow* window, float deltaTime, glm::vec3 cameraFrontDir
 		}
 	}
 
+	if (type == 1) { //directional light doesnt have a rotation, it relies on the position
+		lightFrontDirection = glm::normalize(lightTarget - position);
+		lightRightDirection = glm::normalize(glm::cross(lightFrontDirection, lightUp));
+		lightUpDirection = glm::normalize(glm::cross(lightRightDirection, lightFrontDirection));
+	}
+
 	// Make sure to reflect the changes
 	modelMatrix = glm::translate(glm::mat4(1.0f), position);
 }
@@ -106,19 +118,20 @@ void Light::Modify(GLFWwindow* window, float deltaTime, glm::vec3 cameraFrontDir
 //yaw - light rotation around the y axis
 //pitch - light rotation around the x axis
 void Light::Rotate(float pitch, float yaw) {
-	glm::vec3 front;
-	front.x = cos(glm::radians(pitch)) * cos(glm::radians(yaw));
-	front.y = sin(glm::radians(pitch));
-	front.z = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
-	lightFrontDirection = glm::normalize(front);
+	if (type != 1) {
+		glm::vec3 front;
+		front.x = cos(glm::radians(pitch)) * cos(glm::radians(yaw));
+		front.y = sin(glm::radians(pitch));
+		front.z = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
+		lightFrontDirection = glm::normalize(front);
 
-	// Recalculate right and up directions
-	lightRightDirection = glm::normalize(glm::cross(lightFrontDirection, lightUp));
-	lightUpDirection = glm::normalize(glm::cross(lightRightDirection, lightFrontDirection));
-
+		// Recalculate right and up directions
+		lightRightDirection = glm::normalize(glm::cross(lightFrontDirection, lightUp));
+		lightUpDirection = glm::normalize(glm::cross(lightRightDirection, lightFrontDirection));
+	}
 }
 
-void Light::applyUniforms(Shader& baseShader, Shader& lightObjShader, int index, int numLigths) {
+void Light::applyUniforms(Shader& baseShader, Shader& shadowShader, int index, int numLigths) {
 
 	std::string base = "lights[" + std::to_string(index) + "]";
 
@@ -129,6 +142,8 @@ void Light::applyUniforms(Shader& baseShader, Shader& lightObjShader, int index,
 	glUniform1f(glGetUniformLocation(baseShader.ID, (base + ".lightInten").c_str()), intensity);
 	glUniform1i(glGetUniformLocation(baseShader.ID, (base + ".lightType").c_str()), type);
 	glUniform1i(glGetUniformLocation(baseShader.ID, "numLights"), numLigths);
+
+	glUniform1i(glGetUniformLocation(shadowShader.ID, "numLights"), numLigths);
 }
 
 void swap(Light& a, Light& b) noexcept {
@@ -140,7 +155,7 @@ void swap(Light& a, Light& b) noexcept {
 	swap(a.intensity, b.intensity);
 	swap(a.type, b.type);
 	swap(a.modelMatrix, b.modelMatrix);
-	swap(a.lightMatrix, b.lightMatrix);
+	swap(a.lightProjectionMat, b.lightProjectionMat);
 	swap(a.lightFrontDirection, b.lightFrontDirection);
 	swap(a.lightRightDirection, b.lightRightDirection);
 	swap(a.lightUpDirection, b.lightUpDirection);

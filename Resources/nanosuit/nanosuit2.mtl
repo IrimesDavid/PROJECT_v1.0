@@ -10,7 +10,7 @@ d 1.000000
 illum 2
 map_Kd arm_dif.png
 map_Ks arm_showroom_spec.png
-map_Bump arm_showroom_ddn.png
+map_bump arm_showroom_ddn.png
 
 newmtl Body
 Ns 96.078453
@@ -21,7 +21,7 @@ d 1.000000
 illum 2
 map_Kd body_dif.png
 map_Ks body_showroom_spec.png
-map_Bump body_showroom_ddn.png
+map_bump body_showroom_ddn.png
 
 newmtl Glass
 Ns 96.078453
@@ -32,7 +32,7 @@ d 1.000000
 illum 2
 map_Kd glass_dif.png
 map_Ks glass_showroom_spec.png
-map_Bump glass_ddn.png
+map_bump glass_ddn.png
 
 newmtl Glass2
 Ns 0.000000
@@ -53,7 +53,7 @@ d 1.000000
 illum 2
 map_Kd hand_dif.png
 map_Ks hand_showroom_spec.png
-map_Bump hand_showroom_ddn.png
+map_bump hand_showroom_ddn.png
 
 newmtl Helmet
 Ns 96.078453
@@ -64,7 +64,7 @@ d 1.000000
 illum 2
 map_Kd helmet_diff.png
 map_Ks helmet_showroom_spec.png
-map_Bump helmet_showroom_ddn.png
+map_bump helmet_showroom_ddn.png
 
 newmtl Leg
 Ns 96.078453
@@ -75,4 +75,4 @@ d 1.000000
 illum 2
 map_Kd leg_dif.png
 map_Ks leg_showroom_spec.png
-map_Bump leg_showroom_ddn.png
+map_bump leg_showroom_ddn.png

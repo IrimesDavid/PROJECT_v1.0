@@ -1,24 +1,15 @@
-# Blender 4.0.2 MTL File: 'parking_lot.blend'
+# Blender 4.0.2 MTL File: 'None'
 # www.blender.org
-
-newmtl GLASS_Inst
-Ns 360.000000
-Ka 1.000000 1.000000 1.000000
-Ks 0.500000 0.500000 0.500000
-Ke 0.000000 0.000000 0.000000
-Ni 1.000000
-illum 2
-map_Kd glass_mat_diffuse.png
 
 newmtl Lights_m
 Ns 360.000000
 Ka 1.000000 1.000000 1.000000
 Ks 0.500000 0.500000 0.500000
-Ke 1.900000 1.832129 0.234656
+Ke 0.000000 0.000000 0.000000
 Ni 1.000000
-d 0.727273
 illum 9
 map_Kd glass_mat_diffuse.png
+map_d glass_mat_alpha.png
 
 newmtl atlas_mat
 Ns 360.000000

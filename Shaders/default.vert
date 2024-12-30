@@ -16,10 +16,11 @@ out vec3 Normal;
 out vec3 color;
 // Outputs the texture coordinates to the fragment shader
 out vec2 texCoord;
+out vec4 fragPosLight;
 
 uniform mat4 camMatrix;
-// Model matrix for the object
 uniform mat4 model;
+uniform mat4 lightProjection;
 
 void main(){
 	
@@ -34,6 +35,8 @@ void main(){
 
 	// Assigns the texture coordinates from the Vertex Data to "texCoord"
 	texCoord = aTex;
+
+	fragPosLight = lightProjection * vec4(currentPos, 1.0f);
 
 	// Outputs the positions/coordinates of all vertices
 	gl_Position = camMatrix * vec4(currentPos, 1.0f);

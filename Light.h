@@ -16,13 +16,14 @@
 class Light {
 private:
 private:
-	glm::vec3 lightTarget = glm::vec3(0.0f, 0.0f, -1.0f);
-	glm::vec3 lightFrontDirection;
+	glm::vec3 lightTarget = glm::vec3(0.0f, 0.0f, 0.0f);
 	glm::vec3 lightRightDirection;
 	glm::vec3 const lightUp = glm::vec3(0.0f, 1.0f, 0.0f);
-	glm::vec3 lightUpDirection = glm::vec3(0.0f, 1.0f, 0.0f);
 
 public:
+	glm::vec3 lightFrontDirection;
+	glm::vec3 lightUpDirection = glm::vec3(0.0f, 1.0f, 0.0f);
+
 	Model3D lightbulb;
 	glm::vec3 position;
 	glm::vec4 color;
@@ -36,7 +37,7 @@ public:
 	float sensitivity = 0.05f;
 
 	glm::mat4 modelMatrix = glm::mat4(1.0f);
-	glm::mat4 lightMatrix = glm::mat4(1.0f);
+	glm::mat4 lightProjectionMat = glm::mat4(1.0f);
 
 	Light(glm::vec3 pos, glm::vec3 rot, glm::vec4 col, float inten, int t);
 
@@ -47,7 +48,7 @@ public:
 	// Handles light rotation
 	void Rotate(float pitch, float yaw);
 	// Self explanatory
-	void applyUniforms(Shader& baseShader, Shader& lightObjShader, int index, int numLights);
+	void applyUniforms(Shader& baseShader, Shader& shadowShader, int index, int numLigths);
 
 	friend void swap(Light& a, Light& b) noexcept;
 };
