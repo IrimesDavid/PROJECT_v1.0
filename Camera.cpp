@@ -74,3 +74,37 @@ void Camera::Rotate(float pitch, float yaw) {
 	cameraRightDirection = glm::normalize(glm::cross(cameraFrontDirection, cameraUp));
 	cameraUpDirection = glm::normalize(glm::cross(cameraRightDirection, cameraFrontDirection));
 }
+
+bool Camera::playAnimation() {
+	static float animationProgress = 0.0f; // Progress of the animation (0.0 to 1.0)
+	const float animationDuration = 300.0f; // Total duration of the animation in seconds
+	const float rotationSpeed = 45.0f;    // Degrees per second for camera rotation
+
+	// Calculate animation step
+	float animationStep = 1.0f / (animationDuration * 2.0f);
+
+	// Update animation progress
+	animationProgress += animationStep * speed;
+
+	// Smooth circular motion around a target point
+	float radius = 15.0f; // Distance from target
+	float angle = glm::radians(360.0f * animationProgress); // Circular path
+
+	// Calculate camera position (circle around origin)
+	cameraPosition.x = radius * cos(angle);
+	cameraPosition.z = radius * sin(angle);
+	cameraPosition.y = 10.0f; // Elevate slightly for dynamic motion
+
+	// Rotate camera to look at the origin
+	float pitch = -25.0f;    // Fixed pitch for downward view
+	float yaw = glm::degrees(angle) + 180.0f; // Face towards the center
+	Rotate(pitch, yaw);
+
+	// End animation when progress reaches 1.0
+	if (animationProgress >= 1.0f) {
+		animationProgress = 0.0f; // Reset for the next animation
+		return true;             // Animation completed
+	}
+
+	return false; // Animation still running
+}

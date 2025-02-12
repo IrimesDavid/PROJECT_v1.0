@@ -51,17 +51,33 @@ Texture::Texture(std::string file_name, std::string texType, GLenum format, GLen
 	GLuint textureID;
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_2D, textureID);
-	glTexImage2D(
-		GL_TEXTURE_2D,
-		0,
-		GL_RGBA, //GL_SRGB,//GL_RGBA,
-		x,
-		y,
-		0,
-		GL_RGBA,
-		GL_UNSIGNED_BYTE,
-		image_data
-	);
+	if (type != "diffuseTex" && type != "normalTex" && type != "emissiveTex") {
+		glTexImage2D
+		(
+			GL_TEXTURE_2D,
+			0,
+			GL_RED,
+			x,
+			y,
+			0,
+			GL_RGBA,
+			GL_UNSIGNED_BYTE,
+			image_data
+		);
+	}
+	else {
+		glTexImage2D(
+			GL_TEXTURE_2D,
+			0,
+			GL_RGBA, //GL_SRGB,//GL_RGBA,
+			x,
+			y,
+			0,
+			GL_RGBA,
+			GL_UNSIGNED_BYTE,
+			image_data
+		);
+	}
 	glGenerateMipmap(GL_TEXTURE_2D);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -77,8 +93,6 @@ void Texture::texUnit(Shader& shader, const char* uniform, GLuint unit)
 {
 	// Gets the location of the uniform
 	GLuint texUni = glGetUniformLocation(shader.ID, uniform);
-	// Shader needs to be activated before changing the value of a uniform
-	shader.Activate();
 	// Sets the value of the uniform
 	glUniform1i(texUni, unit);
 }

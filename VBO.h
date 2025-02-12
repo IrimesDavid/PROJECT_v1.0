@@ -10,6 +10,9 @@ struct Vertex {
 	glm::vec3 normal;
 	glm::vec3 color;
 	glm::vec2 texUV; //texture coordinates
+
+	glm::vec3 tangent;    // Tangent vector at the vertex
+	glm::vec3 bitangent;  // Bitangent vector at the vertex
 };
 
 class VBO

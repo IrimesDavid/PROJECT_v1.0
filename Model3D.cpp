@@ -1,5 +1,7 @@
 #include "Model3D.hpp"
 	
+	std::vector<Mesh> Model3D::alphaMeshes;
+	
 	void Model3D::Unload() {
 		// Clear textures
 		for (size_t i = 0; i < loadedTextures.size(); i++) {
@@ -34,9 +36,14 @@
 
 	// Draw each mesh from the model
 	void Model3D::Draw(Shader shaderProgram, Camera camera) {
-
 		for (int i = 0; i < meshes.size(); i++)
 			meshes[i].Draw(shaderProgram, camera);
+	}
+
+	//Draws the meshes that have transparent/semi-transparent fragments
+	void Model3D::RenderAlphaMeshes(Shader shaderProgram, Camera camera) {
+		for (int i = 0; i < alphaMeshes.size(); i++)
+			alphaMeshes[i].Draw(shaderProgram, camera);
 	}
 
 	// Does the parsing of the .obj file and fills in the data structure
@@ -172,10 +179,54 @@
 						currentTexture = LoadTexture(basePath + alphaTexturePath, "alphaTex");
 						textures.push_back(currentTexture);
 					}
+
+					//normal texture
+					std::string normalTexturePath = materials[materialId].bump_texname;
+
+					if (!normalTexturePath.empty()) {
+
+						Texture currentTexture;
+						currentTexture = LoadTexture(basePath + normalTexturePath, "normalTex");
+						textures.push_back(currentTexture);
+					}
+
+					//displacement texture
+					std::string displacementTexturePath = materials[materialId].displacement_texname;
+
+					if (!displacementTexturePath.empty()) {
+
+						Texture currentTexture;
+						currentTexture = LoadTexture(basePath + displacementTexturePath, "displacementTex");
+						textures.push_back(currentTexture);
+					}
+
+					//emissive texture
+					std::string emissiveTexturePath = materials[materialId].emissive_texname;
+
+					if (!emissiveTexturePath.empty()) {
+
+						Texture currentTexture;
+						currentTexture = LoadTexture(basePath + emissiveTexturePath, "emissiveTex");
+						textures.push_back(currentTexture);
+					}
+
+					//metallic texture
+					std::string metallicTexturePath = materials[materialId].metallic_texname;
+
+					if (!metallicTexturePath.empty()) {
+
+						Texture currentTexture;
+						currentTexture = LoadTexture(basePath + metallicTexturePath, "metallicTex");
+						textures.push_back(currentTexture);
+					}
 				}
 			}
-
-			meshes.push_back(Mesh(vertices, indices, textures));
+			// logic to separte the normal meshes from the alpha blended meshes
+			Mesh mesh = Mesh(vertices, indices, textures);
+			if (mesh.alphaFlg == false)
+				meshes.push_back(mesh);
+			else
+				alphaMeshes.push_back(mesh);
 		}
 	}
 

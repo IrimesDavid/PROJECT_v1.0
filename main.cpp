@@ -1,6 +1,3 @@
-#include<filesystem>
-namespace fs = std::filesystem;
-
 #if defined (__APPLE__)
 #define GLFW_INCLUDE_GLCOREARB
 #else
@@ -22,8 +19,11 @@ float currentTime = glfwGetTime();
 float lastTime = 0.0f;
 float deltaTime;
 
+// Window and camera
 GLFWwindow* window;
 Camera camera(viewportWidth, viewportHeight, glm::vec3(0.0f, 2.0f, 2.0f));
+bool filmMode = false;
+
 //Mouse movement
 float lastX = 800, lastY = 450; // Initial center position (assuming 800x600 window)
 bool firstMouse = true;          // Tracks if it's the first mouse movement
@@ -36,6 +36,10 @@ int selectedLightIndex = 0;
 bool altPressed = false;
 bool hideLightObjects = false;
 
+// ADDITIONAL FLAGS
+int enableFog = 1; // fog is enabled by default
+int normalParallaxFlg = 0;
+
 // Outline
 glm::vec4 outlineColor = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 glm::mat4 outlineModel = glm::mat4(1.0f);
@@ -44,7 +48,9 @@ glm::mat4 outlineModel = glm::mat4(1.0f);
 Model3D nanosuit;
 Model3D ground;
 Model3D glass;
+Model3D car_glass;
 glm::mat4 objModel = glm::mat4(1.0f);
+
 int rasterizeMode = 0;
 
 //SHADERS
@@ -56,6 +62,7 @@ Shader shadowShader;
 
 //SKYBOX
 SkyBox mySkyBox;
+int skyboxNum = 1;
 
 // for anti-aliasing
 unsigned int samples = 8;
@@ -104,14 +111,43 @@ void keyboardCallback(GLFWwindow* window, int key, int scancode, int action, int
 	
 	// Cycle through rasterizeModes
 	if (glfwGetKey(window, GLFW_KEY_GRAVE_ACCENT) == GLFW_PRESS) {
-		rasterizeMode = (rasterizeMode + 1) % 3; //for now only 2 modes: with or without outline
+		rasterizeMode = (rasterizeMode + 1) % 3;
+		
 		if (rasterizeMode == 2)
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		else
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 
-	// Check if Alt is pressed
+	// Change skybox
+	if (key == GLFW_KEY_1 && action == GLFW_PRESS && skyboxNum != 1) {
+		mySkyBox.setSkybox("Resources/skybox/skybox1/");
+		skyboxNum = 1;
+	}
+	if (key == GLFW_KEY_2 && action == GLFW_PRESS && skyboxNum != 2) {
+		mySkyBox.setSkybox("Resources/skybox/skybox2/");
+		skyboxNum = 2;
+	}
+
+	// Camera animation
+	if (key == GLFW_KEY_C && action == GLFW_PRESS) {
+		filmMode = !filmMode;
+	}
+	
+	// Toggle fog on or off
+	if (key == GLFW_KEY_F && action == GLFW_PRESS) {
+		enableFog = (enableFog + 1) % 2;
+		shaderProgram.Activate();
+		glUniform1i(glGetUniformLocation(shaderProgram.ID, "enableFog"), enableFog);
+	}
+	// Toggle detailed render (normal and parallax occlusion) on or off
+	if (key == GLFW_KEY_N && action == GLFW_PRESS) {
+		normalParallaxFlg = (normalParallaxFlg + 1) % 2;
+		shaderProgram.Activate();
+		glUniform1i(glGetUniformLocation(shaderProgram.ID, "normalParallaxFlg"), normalParallaxFlg);
+	}
+
+	// Check if Alt is pressed (light rotation)
 	if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) {
 		if (!altPressed) {
 			altPressed = true;
@@ -185,6 +221,7 @@ void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
 void mouseCursorCallback(GLFWwindow* window, double xpos, double ypos) {
 	static float yaw = -90.0f; // Initial yaw (facing -z)
 	static float pitch = 0.0f; // Initial pitch (looking straight ahead)
+
 	if (!cursorState) {
 		// If this is the first frame, just update the initial position and return
 		if (firstMouse) {
@@ -212,15 +249,15 @@ void mouseCursorCallback(GLFWwindow* window, double xpos, double ypos) {
 		if (pitch > 89.0f) pitch = 89.0f;
 		if (pitch < -89.0f) pitch = -89.0f;
 
-	
-		if (altPressed) {
-			if(!lights.empty())
-				lights[selectedLightIndex].Rotate(pitch, yaw);
-
+		if (filmMode == false) {
+			if (altPressed) {
+				if (!lights.empty())
+					lights[selectedLightIndex].Rotate(pitch, yaw);
+			}
+			else
+				// Update the camera rotation based on new yaw and pitch
+				camera.Rotate(pitch, yaw);
 		}
-		else
-			// Update the camera rotation based on new yaw and pitch
-			camera.Rotate(pitch, yaw);
 	}
 }
 
@@ -272,7 +309,7 @@ int initOpenGL() {
 	glEnable(GL_STENCIL_TEST);
 	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
-	// for blending (semi-transparent objects) //it doesnt work >:(
+	// for blending (semi-transparent objects)
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBlendEquation(GL_FUNC_ADD);
@@ -323,6 +360,8 @@ void initShaders() {
 	// OBJECTS
 	shaderProgram.Activate();
 	glUniformMatrix4fv(glGetUniformLocation(shaderProgram.ID, "model"), 1, GL_FALSE, glm::value_ptr(objModel));
+	glUniform1i(glGetUniformLocation(shaderProgram.ID, "enableFog"), enableFog);
+	glUniform1i(glGetUniformLocation(shaderProgram.ID, "normalParallaxFlg"), normalParallaxFlg);
 
 	// LIGHTS
 	lights.push_back(Light(glm::vec3(1.5f, 1.5f, 1.5f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f, 2));
@@ -337,7 +376,7 @@ void initShaders() {
 	glUniform1f(glGetUniformLocation(outlineShader.ID, "outline"), 0.03f);
 
 	//SKYBOX
-	mySkyBox.setSkybox("Resources/skybox/skybox2/");
+	mySkyBox.setSkybox("Resources/skybox/skybox1/");
 
 	//SHADOW
 	shadowShader.Activate();
@@ -351,9 +390,11 @@ void initShaders() {
 
 void loadModels() {
 	// Loads ordinary objects
-	nanosuit.LoadModel("Resources/nanosuit/nanosuit2.obj");
-	ground.LoadModel("Resources/parking_lot/parking_lot.obj");
+	nanosuit.LoadModel("Resources/bricks/bricks1/bricks.obj");
+	ground.LoadModel("Resources/scene/scene.obj");
+	// obs: these last two no longer need to be separate from the big scene (ground.obj), but I am lazy to merge them all together
 	glass.LoadModel("Resources/glass/glass.obj");
+	car_glass.LoadModel("Resources/car_glass/car_glass.obj");
 
 	// Load light objects
 	for (int i = 0; i < lights.size(); ++i)
@@ -368,7 +409,13 @@ void handleEvents(Shader shader, bool firstCall) {
 		deltaTime = currentTime - lastTime;
 		lastTime = currentTime;
 
-		camera.Move(window, deltaTime);
+		if(filmMode == false)
+			camera.Move(window, deltaTime);
+		else {
+			bool finish = camera.playAnimation();
+			if(finish)
+				filmMode = false;
+		}
 		camera.updateMatrix(45.0f, 0.1f, 1000.0f);
 
 		if (!lights.empty()) {
@@ -466,7 +513,7 @@ int main()
 	while (!glfwWindowShouldClose(window))
 	{
 		// Specify the color of the backgrounds
-		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		// Clean the back buffer and assign the new color to it
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		
@@ -475,6 +522,11 @@ int main()
 
 		// Draw the skybox
 		mySkyBox.Draw(skyboxShader, camera.view, camera.projection);
+		// Add reflexions of the skybox 
+		shaderProgram.Activate();
+		glActiveTexture(GL_TEXTURE0 + 31);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, mySkyBox.GetTextureId());
+		glUniform1i(glGetUniformLocation(shaderProgram.ID, "skyboxCubeMap"), 31);
 
 		// Draw cast shadows
 		glViewport(0, 0, shadowMapWidth, shadowMapHeight);
@@ -485,6 +537,7 @@ int main()
 
 		nanosuit.Draw(shadowShader, camera);
 		ground.Draw(shadowShader, camera);
+		Model3D::RenderAlphaMeshes(shadowShader, camera);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, viewportWidth, viewportHeight);
@@ -494,27 +547,38 @@ int main()
 		shaderProgram.Activate();
 
 		// Bind the Shadow Map
-		glActiveTexture(GL_TEXTURE0 + 2);
+		glActiveTexture(GL_TEXTURE0 + 30);
 		glBindTexture(GL_TEXTURE_2D, shadowMap);
-		glUniform1i(glGetUniformLocation(shaderProgram.ID, "shadowMap"), 2);
+		glUniform1i(glGetUniformLocation(shaderProgram.ID, "shadowMap"), 30);
 
 		switch (rasterizeMode) {
 			case 0:
 				nanosuit.Draw(shaderProgram, camera);
 				ground.Draw(shaderProgram, camera);
+
+				// Draw transparent objects last
+				Model3D::RenderAlphaMeshes(shaderProgram, camera);
+				glass.Draw(shaderProgram, camera);
+				car_glass.Draw(shaderProgram, camera);
 				break;
 			case 1:
 				drawObjectWithOutline(&nanosuit, shaderProgram);
-				drawObjectWithOutline(&ground, shaderProgram);
+				drawObjectWithOutline(&ground, shaderProgram); //TODO/OBS: poti sa pui lista de mesh-uri cu alpha blending intr-un obiect Model3D, ca sa poti sa le faci si lor outline
+
+				Model3D::RenderAlphaMeshes(shaderProgram, camera);
+				glass.Draw(shaderProgram, camera);
+				car_glass.Draw(shaderProgram, camera);
 				break;
 			default:
 				nanosuit.Draw(shaderProgram, camera);
 				ground.Draw(shaderProgram, camera);
+
+				// Draw transparent objects last
+				Model3D::RenderAlphaMeshes(shaderProgram, camera);
+				glass.Draw(shaderProgram, camera);
+				car_glass.Draw(shaderProgram, camera);
 				break;
 		}
-
-		// Draw transparent objects last
-		glass.Draw(shaderProgram, camera);
 
 		//Draw light objects
 		if (!hideLightObjects) {
@@ -526,12 +590,15 @@ int main()
 		glfwSwapBuffers(window);
 		// Take care of all GLFW events
 		glfwPollEvents();
+
 	}
 
 	// Delete all the objects we've created
 	shaderProgram.Delete();
 	lightShader.Delete();
 	outlineShader.Delete();
+	skyboxShader.Delete();
+	shadowShader.Delete();
 	// Delete window before ending the program
 	glfwDestroyWindow(window);
 	// Terminate GLFW before ending the program

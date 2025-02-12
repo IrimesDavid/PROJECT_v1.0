@@ -23,9 +23,16 @@
 
 		void Draw(Shader shaderProgram, Camera camera);
 
+		//draws the rest of the meshes that have alpha blending. Recommended to call once, after drawing all the normal meshes.
+		static void RenderAlphaMeshes(Shader shaderProgram, Camera camera);
+
     private:
 		// Component meshes - group of objects
         std::vector<Mesh> meshes;
+
+		// To store alpha meshes, and draw them only at the end
+		static std::vector<Mesh> alphaMeshes;
+
 		// Associated textures
         std::vector<Texture> loadedTextures;
 

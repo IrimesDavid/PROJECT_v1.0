@@ -30,8 +30,7 @@ public:
 private:
     GLuint skyboxVAO;
     GLuint skyboxVBO;
-    GLuint textureSkyboxID;
-    GLuint cubemapTexture;
+    GLuint cubemapTextureID;
     GLuint LoadSkyBoxTextures(std::vector<const GLchar*> cubeMapFaces);
     void InitSkyBox();
 };

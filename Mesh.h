@@ -22,13 +22,14 @@ public:
 	std::vector <Vertex> vertices;
 	std::vector <GLuint> indices;
 	std::vector <Texture> textures;
+	bool alphaFlg = false;
 
 	VAO vao;
 	VBO vbo;
 	EBO ebo;
 
 	Mesh(std::vector <Vertex>& vertices, std::vector <GLuint>& indices, std::vector <Texture>& textures);
-
+	void PrepareVertexData(std::vector<Vertex>& vertices, const std::vector<GLuint>& indices);
 	void Draw(Shader& shader, Camera& camera);
 };
 

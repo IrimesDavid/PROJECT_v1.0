@@ -44,6 +44,8 @@ public:
 	void Move(GLFWwindow* window, float deltaTime);
 	//Handles camera rotation
 	void Rotate(float pitch, float yaw);
+	//plays an animation of the camera and returns true when finished
+	bool playAnimation();
 };
 
 #endif

@@ -5,7 +5,7 @@ uniform sampler2D alphaTex; // Alpha texture sampler
 uniform int hasAlphaTex = 0; //by default, no alpha texture
 
 void main(){
-	if(hasAlphaTex == 1 && texture(alphaTex, TexCoord).r < 0.1)
+	if(hasAlphaTex == 1 && texture(alphaTex, TexCoord).r < 0.3)
     discard;
     
     // The fragment depth is written automatically to the depth buffer

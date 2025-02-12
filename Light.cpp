@@ -77,30 +77,30 @@ void Light::Modify(GLFWwindow* window, float deltaTime, glm::vec3 cameraFrontDir
 	//LIGHT INTENSITY / RGB values
 	if (glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS) {
 		if (glfwGetKey(window, GLFW_KEY_KP_4) == GLFW_PRESS) {
-			color.x = std::max(color.x - normalSpeed * 15, 0.0f);
+			color.x = std::max(color.x - normalSpeed * 5, 0.0f);
 		}
 		else if (glfwGetKey(window, GLFW_KEY_KP_5) == GLFW_PRESS) {
-			color.y = std::max(color.y - normalSpeed * 15, 0.0f);
+			color.y = std::max(color.y - normalSpeed * 5, 0.0f);
 		}
 		else if (glfwGetKey(window, GLFW_KEY_KP_6) == GLFW_PRESS) {
-			color.z = std::max(color.z - normalSpeed * 15, 0.0f);
+			color.z = std::max(color.z - normalSpeed * 5, 0.0f);
 		}
 		else {
-			intensity = std::max(intensity - (normalSpeed * 15), 0.0f);
+			intensity = std::max(intensity - (normalSpeed * 5), 0.0f);
 		}
 	}
 	else if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS) {
 		if (glfwGetKey(window, GLFW_KEY_KP_4) == GLFW_PRESS) {
-			color.x = std::min(color.x + normalSpeed * 15, 1.0f);
+			color.x = std::min(color.x + normalSpeed * 5, 1.0f);
 		}
 		else if (glfwGetKey(window, GLFW_KEY_KP_5) == GLFW_PRESS) {
-			color.y = std::min(color.y + normalSpeed * 15, 1.0f);
+			color.y = std::min(color.y + normalSpeed * 5, 1.0f);
 		}
 		else if (glfwGetKey(window, GLFW_KEY_KP_6) == GLFW_PRESS) {
-			color.z = std::min(color.z + normalSpeed * 15, 1.0f);
+			color.z = std::min(color.z + normalSpeed * 5, 1.0f);
 		}
 		else {
-			intensity = std::min(intensity + normalSpeed * 15, 30.0f);
+			intensity = std::min(intensity + normalSpeed * 5, 10.0f);
 		}
 	}
 
@@ -118,7 +118,7 @@ void Light::Modify(GLFWwindow* window, float deltaTime, glm::vec3 cameraFrontDir
 //yaw - light rotation around the y axis
 //pitch - light rotation around the x axis
 void Light::Rotate(float pitch, float yaw) {
-	if (type != 1) {
+	if(type != 1) {
 		glm::vec3 front;
 		front.x = cos(glm::radians(pitch)) * cos(glm::radians(yaw));
 		front.y = sin(glm::radians(pitch));

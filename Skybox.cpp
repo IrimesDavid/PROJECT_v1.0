@@ -36,7 +36,7 @@
 
     void SkyBox::Load(std::vector<const GLchar*> cubeMapFaces)
     {
-        cubemapTexture = LoadSkyBoxTextures(cubeMapFaces);
+        cubemapTextureID = LoadSkyBoxTextures(cubeMapFaces);
         InitSkyBox();
     }
 
@@ -54,7 +54,7 @@
         glBindVertexArray(skyboxVAO);
         glActiveTexture(GL_TEXTURE0);
         glUniform1i(glGetUniformLocation(skyboxShader.ID, "skybox"), 0);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTextureID);
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
 
@@ -155,5 +155,5 @@
 
     GLuint SkyBox::GetTextureId()
     {
-        return cubemapTexture;
+        return cubemapTextureID;
     }
